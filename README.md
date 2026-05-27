@@ -1,45 +1,47 @@
 # Vehicle Advisor Pro
 
-Proyecto fullstack con:
-- Frontend: React + Vite
+Proyecto fullstack profesional con:
+- Frontend: React + Vite (compilado)
 - Backend: Express + tRPC
 - Base de datos: MySQL + Drizzle ORM
 - Autenticación: JWT + OAuth
-- Almacenamiento: Forge Storage API
-- Frontend desplegado en: Vercel
-- Backend desplegado en: Railway
+- Almacenamiento: Manus Forge S3
+- LLM Analysis: Google Gemini 2.5-flash
+- Deploy: Railway (Express sirve frontend + backend unificado)
+
+## Arquitectura
+
+**Deploy Unified**: Todo (frontend compilado + API) se despliega desde un único servidor Express en Railway.
+
+```
+Railway (Express Server)
+├── /api/trpc/* -> tRPC API endpoints
+├── /api/oauth/* -> OAuth callbacks  
+├── /storage/* -> Storage proxy (Manus Forge)
+└── /* -> Compiled React frontend (SPA)
+```
 
 ## Comandos principales
 
-- `npm install`
-- `npm run dev` - inicia el servidor Express en modo desarrollo y carga el frontend vía Vite
-- `npm run build` - construye frontend y backend para producción
-- `npm run build:client` - construye solo el frontend
-- `npm run build:server` - construye solo el backend
-- `npm run start` - inicia el servidor Express de producción desde `dist/index.js`
-- `npm run check` - valida tipos con TypeScript
+```bash
+npm install              # instala dependencias
+npm run dev             # modo desarrollo (Express + Vite hot reload)
+npm run build           # compila frontend (Vite) + backend (esbuild)
+npm run start           # inicia servidor Express de producción
+npm run preview         # prueba build de producción localmente
+npm run check           # valida tipos TypeScript
+```
 
 ## Variables de entorno
 
-Crea un archivo `.env` basado en `.env.example` antes de ejecutar.
+Copia `.env.example` a `.env` y completa los valores. Ver archivo para detalles.
 
-### Backend
-
-- `DATABASE_URL` - cadena de conexión MySQL
-- `JWT_SECRET` - secreto para la firma de tokens/cookies
-- `OAUTH_SERVER_URL` - URL del proveedor OAuth
-- `BUILT_IN_FORGE_API_URL` - URL base de la API Forge
-- `BUILT_IN_FORGE_API_KEY` - clave de API Forge
-- `CORS_ORIGIN` - URL del frontend autorizado en producción
-- `OWNER_OPEN_ID` - identificador opcional de propietario
-
-### Frontend
-
-- `VITE_API_URL` - URL pública del backend para el frontend
-- `VITE_OAUTH_PORTAL_URL` - URL del portal OAuth
-- `VITE_APP_ID` - App ID para el frontend
-- `VITE_FRONTEND_FORGE_API_URL` - URL pública de Forge para el frontend
-- `VITE_FRONTEND_FORGE_API_KEY` - clave pública de Forge para el frontend
+Mínimo requerido en producción:
+- `DATABASE_URL` - MySQL connection string
+- `JWT_SECRET` - JWT signing key
+- `BUILT_IN_FORGE_API_URL` - Forge API URL
+- `BUILT_IN_FORGE_API_KEY` - Forge API Key
+- `OAUTH_SERVER_URL` - OAuth provider URL
 
 ## Desarrollo local (Windows)
 
@@ -47,34 +49,122 @@ Crea un archivo `.env` basado en `.env.example` antes de ejecutar.
    ```bash
    npm install
    ```
-2. Copia `.env.example` a `.env` y completa los valores.
+
+2. Copia `.env.example` a `.env` y completa los valores
+
 3. Ejecuta el modo de desarrollo:
    ```bash
    npm run dev
    ```
-4. Abre `http://localhost:3000`
+   Esto arranca Express en `http://localhost:3000` con Vite hot reload
 
-El servidor Express arranca en `localhost:3000` y el frontend se entrega con Vite en la misma app.
+4. Abre `http://localhost:3000` en el navegador
 
-## Despliegue frontend en Vercel
+## Funcionalidades
 
-- Build Command: `npm run build:client`
-- Output Directory: `dist/public`
-- Asegúrate de usar `vercel.json` para las rutas SPA
-- Variables de entorno del frontend: `VITE_API_URL`, `VITE_OAUTH_PORTAL_URL`, `VITE_APP_ID`, `VITE_FRONTEND_FORGE_API_URL`, `VITE_FRONTEND_FORGE_API_KEY`
+✅ **Admin Panel**
+- Crear, editar, eliminar vehículos
+- Cargar y analizar PDFs Carfax (LLM)
+- Subir fotos de vehículos (hasta 5)
+- Registrar daños y piezas a reemplazar
+- Evaluación interna (con badge "RECOMENDABLE")
+- Guardar códigos ZIP y estado para logística
 
-## Despliegue backend en Railway
+✅ **Home Page**
+- Listar vehículos con datos logísticos
+- Filtros por estado, precio, evaluación
+- Integración Google Maps
 
-- Start Command: `npm run start`
-- Build Command: `npm run build`
-- Variables de entorno del backend: `DATABASE_URL`, `JWT_SECRET`, `OAUTH_SERVER_URL`, `BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY`, `CORS_ORIGIN`, `OWNER_OPEN_ID`
-- Railway provee `PORT` automáticamente; el servidor Express lo usa por defecto.
+✅ **Vehicle Detail**
+- Vista completa del vehículo
+- Galería de fotos
+- Análisis Carfax
+- Datos de daño y piezas
 
-## Consideraciones de producción
+✅ **Storage**
+- Presigned URLs para S3 (Forge)
+- Carga directa de archivos
+- Soporte máximo 50MB por archivo
 
-- El backend mantiene Express y tRPC funcionando en producción.
-- El frontend se construye y se sirve como archivos estáticos desde `dist/public`.
-- `vercel.json` asegura que todas las rutas SPA apunten a `index.html`.
-- CORS se habilita con orígenes permitidos mediante `CORS_ORIGIN`.
-- `VITE_API_URL` se usa en el frontend para direccionar las llamadas tRPC al backend.
-- `cross-env` garantiza compatibilidad Windows para `NODE_ENV`.
+✅ **LLM Analysis**
+- Análisis automático de Carfax PDFs
+- Extracción de hechos relevantes
+- Evaluación de viabilidad de compra
+- Google Gemini 2.5-flash
+
+✅ **Error Handling**
+- Custom error classes
+- Zod validation
+- Type safety
+
+## Despliegue en Railway
+
+### Setup Inicial
+
+1. Crea una cuenta en [Railway.app](https://railway.app)
+2. Conecta tu repositorio GitHub
+3. Crea dos servicios:
+
+   **Service 1: MySQL Database**
+   - Marketplace → MySQL
+   - Variables generadas automáticamente
+
+   **Service 2: Express App**
+   - Import from GitHub → vehicle-advisor-pro
+   - Environment Variables (ver `.env.example`)
+
+### Deploy Commands
+
+```
+Build: npm run build
+Start: npm run start
+```
+
+### Verifica el deploy
+
+Railway proporciona una URL pública: `https://your-app.railway.app`
+
+Prueba:
+- `/admin` → Admin panel
+- `/` → Home page
+
+## Build & Verification
+
+```bash
+# Compila frontend y backend
+npm run build
+
+# Prueba build de producción localmente
+npm run preview
+# Abre http://localhost:3000
+```
+
+## Troubleshooting
+
+**❌ Error: Invalid URL**
+- Asegúrate de que VITE_API_URL esté vacío (para same-origin)
+
+**❌ Admin panel carga pero sin datos**
+- Verifica que DATABASE_URL está correcto
+
+**❌ Fotos no se cargan**
+- Verifica BUILT_IN_FORGE_API_KEY
+
+**❌ Análisis Carfax falla**
+- Verifica que BUILT_IN_FORGE_API_KEY tiene permisos
+
+## Type Safety & Quality
+
+- TypeScript con strict mode
+- Drizzle ORM para type-safe queries
+- Zod para validación runtime
+- tRPC para type-safe API calls
+- Drizzle relaciones para FK type safety
+
+## Notas
+
+- El frontend se compila a archivos estáticos en `dist/public`
+- Express sirve estos archivos automáticamente en `/*`
+- Las rutas API `/api/trpc` son interceptadas antes que el fallback SPA
+- El servidor soporta hot reload en desarrollo via Vite
+- Todas las imágenes se guardan en S3 via Manus Forge

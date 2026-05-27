@@ -37,21 +37,19 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-const apiBaseUrl = import.meta.env.VITE_API_URL?.trim();
-
 const apiUrl = (() => {
+  // In production, use the same origin (Express serves both frontend and API)
+  // In development, connect to local Express server
+  if (import.meta.env.PROD) {
+    return new URL("/api/trpc", window.location.origin).toString();
+  }
+
+  const apiBaseUrl = import.meta.env.VITE_API_URL?.trim();
   if (apiBaseUrl) {
     return new URL("/api/trpc", apiBaseUrl).toString();
   }
 
-  const fallback = "http://localhost:3000";
-  if (import.meta.env.PROD) {
-    console.warn(
-      "VITE_API_URL is not defined in production. Set VITE_API_URL in your frontend environment variables. Falling back to http://localhost:3000 for build-time compatibility."
-    );
-  }
-
-  return new URL("/api/trpc", fallback).toString();
+  return new URL("/api/trpc", "http://localhost:3000").toString();
 })();
 
 const trpcClient = trpc.createClient({
