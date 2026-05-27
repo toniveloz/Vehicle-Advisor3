@@ -1,7 +1,7 @@
 import "dotenv/config";
 import cors from "cors";
-import express from "express";
-import { createServer } from "http";
+import express, { type Express, type Request, type Response } from "express";
+import { createServer, type Server } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
@@ -9,6 +9,8 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { initializeDatabase } from "./migrate";
+import { ENV } from "./env";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -30,12 +32,16 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Initialize database with migrations
+  await initializeDatabase();
+
   const app = express();
   const server = createServer(app);
   app.set("trust proxy", true);
 
+  // CORS configuration based on environment
   const allowedOrigins = [
-    process.env.CORS_ORIGIN,
+    ENV.corsOrigin,
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
@@ -44,7 +50,7 @@ async function startServer() {
 
   app.use(
     cors({
-      origin: (origin, callback) => {
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         if (!origin || allowedOrigins.includes(origin)) {
           return callback(null, true);
         }
@@ -68,21 +74,24 @@ async function startServer() {
     })
   );
   // development mode uses Vite, production mode uses static files
-  if (process.env.NODE_ENV === "development") {
+  if (ENV.isDev) {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
+  const preferredPort = ENV.port;
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    console.log(`⚠️  Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
   server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+    console.log(`\n✅ Server running on http://localhost:${port}/`);
+    console.log(`📍 Environment: ${ENV.environment}`);
+    console.log(`🔗 API: http://localhost:${port}/api/trpc`);
+    console.log(`🏠 Frontend: http://localhost:${port}/\n`);
   });
 }
 

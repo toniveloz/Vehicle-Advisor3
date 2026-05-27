@@ -618,6 +618,42 @@ export const appRouter = router({
       return updated;
     }),
   }),
+
+  logistics: router({
+    searchZipCodes: publicProcedure
+      .input(z.object({ query: z.string().min(1) }))
+      .query(async ({ input }) => {
+        try {
+          const results = await searchZipCodes(input.query);
+          return results;
+        } catch (error) {
+          console.warn("Zip code search error:", error);
+          return [];
+        }
+      }),
+    
+    getZipInfo: publicProcedure
+      .input(z.object({ zipCode: z.string().min(1) }))
+      .query(async ({ input }) => {
+        try {
+          const info = await getZipCodeInfo(input.zipCode);
+          return info;
+        } catch (error) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid ZIP code" });
+        }
+      }),
+    
+    calculateDistance: publicProcedure
+      .input(z.object({ fromZip: z.string().min(1), toZip: z.string().min(1) }))
+      .query(async ({ input }) => {
+        try {
+          const distance = await calculateDistance(input.fromZip, input.toZip);
+          return distance;
+        } catch (error) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Could not calculate distance" });
+        }
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -2,5 +2,14 @@
   "buildCommand": "npm run build",
   "serverless": {
     "includeFiles": "dist/**"
+  },
+  "env": {
+    "DATABASE_URL": "@database_url",
+    "JWT_SECRET": "@jwt_secret",
+    "OAUTH_SERVER_URL": "@oauth_server_url",
+    "BUILT_IN_FORGE_API_URL": "@forge_api_url",
+    "BUILT_IN_FORGE_API_KEY": "@forge_api_key",
+    "VITE_APP_ID": "@vite_app_id",
+    "VITE_OAUTH_PORTAL_URL": "@oauth_portal_url"
   }
 }

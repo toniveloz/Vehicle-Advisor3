@@ -1,8 +1,50 @@
 {
+  "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "command": "npm run build"
+    "builder": "nixpacks",
+    "buildCommand": "npm run build"
   },
-  "start": {
-    "command": "npm run start"
+  "deploy": {
+    "startCommand": "npm run start",
+    "healthcheckUrl": "http://localhost:$PORT/",
+    "restartPolicyMaxRetries": 5
+  },
+  "variables": {
+    "DATABASE_URL": {
+      "description": "MySQL database connection string - REQUIRED",
+      "value": ""
+    },
+    "JWT_SECRET": {
+      "description": "JWT signing secret - REQUIRED (change in production)",
+      "value": ""
+    },
+    "OAUTH_SERVER_URL": {
+      "description": "OAuth provider URL - REQUIRED",
+      "value": ""
+    },
+    "BUILT_IN_FORGE_API_URL": {
+      "description": "Manus Forge API URL - REQUIRED",
+      "value": ""
+    },
+    "BUILT_IN_FORGE_API_KEY": {
+      "description": "Manus Forge API key - REQUIRED",
+      "value": ""
+    },
+    "VITE_APP_ID": {
+      "description": "Application ID - optional",
+      "value": "vehicle-advisor-pro"
+    },
+    "VITE_OAUTH_PORTAL_URL": {
+      "description": "OAuth portal URL - optional",
+      "value": ""
+    },
+    "OWNER_OPEN_ID": {
+      "description": "Owner OpenID - optional",
+      "value": ""
+    },
+    "NODE_ENV": {
+      "description": "Environment mode",
+      "value": "production"
+    }
   }
 }
