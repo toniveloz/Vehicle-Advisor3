@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1778552262883,
+      "tag": "0000_fast_giant_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1778552535072,
+      "tag": "0001_quiet_skaar",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1778735358642,
+      "tag": "0002_workable_the_hand",
+      "breakpoints": true
+    }
+  ]
+}

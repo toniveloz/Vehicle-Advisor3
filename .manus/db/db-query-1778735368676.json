@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `vehicles` ADD `pickupZipcode` varchar(10);\nALTER TABLE `vehicles` ADD `pickupCity` varchar(128);\nALTER TABLE `vehicles` ADD `pickupState` varchar(2);\nALTER TABLE `vehicles` ADD `deliveryZipcode` varchar(10);\nALTER TABLE `vehicles` ADD `deliveryCity` varchar(128);\nALTER TABLE `vehicles` ADD `deliveryState` varchar(2);\nALTER TABLE `vehicles` ADD `distanceMiles` int;\nALTER TABLE `vehicles` ADD `logisticsPriorityColor` enum('green','yellow','orange','red');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28M2bhhtmX93W35.01c9f695600f --database NncqKTCKug6s28wMiSzLzg --execute ALTER TABLE `vehicles` ADD `pickupZipcode` varchar(10);\nALTER TABLE `vehicles` ADD `pickupCity` varchar(128);\nALTER TABLE `vehicles` ADD `pickupState` varchar(2);\nALTER TABLE `vehicles` ADD `deliveryZipcode` varchar(10);\nALTER TABLE `vehicles` ADD `deliveryCity` varchar(128);\nALTER TABLE `vehicles` ADD `deliveryState` varchar(2);\nALTER TABLE `vehicles` ADD `distanceMiles` int;\nALTER TABLE `vehicles` ADD `logisticsPriorityColor` enum('green','yellow','orange','red');",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1999
+}
