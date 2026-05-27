@@ -75,5 +75,6 @@ El servidor Express arranca en `localhost:3000` y el frontend se entrega con Vit
 - El backend mantiene Express y tRPC funcionando en producción.
 - El frontend se construye y se sirve como archivos estáticos desde `dist/public`.
 - `vercel.json` asegura que todas las rutas SPA apunten a `index.html`.
-- CORS se habilita con orígenes permitidos mediante `CORS_ORIGIN` y `VITE_API_URL`.
+- CORS se habilita con orígenes permitidos mediante `CORS_ORIGIN`.
+- `VITE_API_URL` se usa en el frontend para direccionar las llamadas tRPC al backend.
 - `cross-env` garantiza compatibilidad Windows para `NODE_ENV`.

@@ -37,10 +37,27 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+const apiBaseUrl = import.meta.env.VITE_API_URL?.trim();
+
+const apiUrl = (() => {
+  if (apiBaseUrl) {
+    return new URL("/api/trpc", apiBaseUrl).toString();
+  }
+
+  const fallback = "http://localhost:3000";
+  if (import.meta.env.PROD) {
+    console.warn(
+      "VITE_API_URL is not defined in production. Set VITE_API_URL in your frontend environment variables. Falling back to http://localhost:3000 for build-time compatibility."
+    );
+  }
+
+  return new URL("/api/trpc", fallback).toString();
+})();
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: apiUrl,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {
