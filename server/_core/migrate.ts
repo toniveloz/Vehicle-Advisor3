@@ -3,8 +3,8 @@
  * Runs automatically on server startup
  */
 
-import { drizzle } from "drizzle-orm/mysql2";
-import { migrate } from "drizzle-orm/mysql2/migrator";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import path from "path";
 import fs from "fs";
 import { ENV } from "./env";

@@ -210,12 +210,12 @@ const normalizeToolChoice = (
 };
 
 const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+  ENV.openAiApiUrl && ENV.openAiApiUrl.trim().length > 0
+    ? ENV.openAiApiUrl.replace(/\/$/, "")
+    : "https://api.openai.com/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
+  if (!ENV.openAiApiKey) {
     throw new Error("OPENAI_API_KEY is not configured");
   }
 };
@@ -265,6 +265,16 @@ const normalizeResponseFormat = ({
   };
 };
 
+const formatSchemaInstruction = (schema: JsonSchema): string => {
+  const properties = Object.entries(schema.schema)
+    .map(([key, value]) => `- ${key}: ${JSON.stringify(value)}`)
+    .join("\n");
+
+  return `Debes devolver solo un JSON válido que cumpla con el esquema ${schema.name}.
+Esquema:
+${properties}`;
+};
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
 
@@ -277,11 +287,22 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     output_schema,
     responseFormat,
     response_format,
+    maxTokens,
+    max_tokens,
   } = params;
 
+  const normalizedResponseFormat = normalizeResponseFormat({
+    responseFormat,
+    response_format,
+    outputSchema,
+    output_schema,
+  });
+
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: ENV.openAiModel || "gpt-4.1-mini",
     messages: messages.map(normalizeMessage),
+    temperature: 0.2,
+    max_tokens: maxTokens ?? max_tokens ?? 2048,
   };
 
   if (tools && tools.length > 0) {
@@ -293,30 +314,24 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     tools
   );
   if (normalizedToolChoice) {
-    payload.tool_choice = normalizedToolChoice;
+    payload.function_call = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
-  }
-
-  const normalizedResponseFormat = normalizeResponseFormat({
-    responseFormat,
-    response_format,
-    outputSchema,
-    output_schema,
-  });
-
-  if (normalizedResponseFormat) {
-    payload.response_format = normalizedResponseFormat;
+  if (normalizedResponseFormat?.type === "json_schema") {
+    payload.messages = [
+      {
+        role: "system",
+        content: formatSchemaInstruction(normalizedResponseFormat.json_schema),
+      },
+      ...((payload.messages as unknown) as any[]),
+    ];
   }
 
   const response = await fetch(resolveApiUrl(), {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${ENV.openAiApiKey}`,
     },
     body: JSON.stringify(payload),
   });

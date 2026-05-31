@@ -1,16 +1,15 @@
 /**
  * Environment validation with fallbacks and warnings
- * Supports: Local (localhost), Vercel, Railway, Docker
+ * Supports: Local (localhost), Vercel, Docker
  */
 
 const isDev = process.env.NODE_ENV !== "production";
 const isVercel = !!process.env.VERCEL;
-const isRailway = !!process.env.RAILWAY_ENVIRONMENT_ID;
 
 // Auto-detect environment
-const environment = isVercel ? "vercel" : isRailway ? "railway" : isDev ? "dev" : "production";
+const environment = isVercel ? "vercel" : isDev ? "dev" : "production";
 
-// Port detection (Railway uses PORT, Vercel uses VERCEL_URL, local uses hardcoded)
+// Port detection (useful for local dev). Vercel serverless functions don't rely on a local port.
 const detectPort = (): number => {
   if (process.env.PORT) return parseInt(process.env.PORT, 10);
   if (isDev) return 3000;
@@ -41,12 +40,17 @@ const validateEnv = () => {
   // Check critical variables
   checkRequired("DATABASE_URL", process.env.DATABASE_URL);
   checkRequired("JWT_SECRET", process.env.JWT_SECRET);
-  checkRequired("BUILT_IN_FORGE_API_URL", process.env.BUILT_IN_FORGE_API_URL);
-  checkRequired("BUILT_IN_FORGE_API_KEY", process.env.BUILT_IN_FORGE_API_KEY);
+  checkRequired("OPENAI_API_KEY", process.env.OPENAI_API_KEY);
+  checkRequired("SUPABASE_URL", process.env.SUPABASE_URL);
+  checkRequired("SUPABASE_SERVICE_ROLE_KEY", process.env.SUPABASE_SERVICE_ROLE_KEY);
+  checkRequired("SUPABASE_STORAGE_BUCKET", process.env.SUPABASE_STORAGE_BUCKET);
 
   // Check optional but recommended
   checkOptional("OAUTH_SERVER_URL", process.env.OAUTH_SERVER_URL);
   checkOptional("VITE_APP_ID", process.env.VITE_APP_ID);
+  checkOptional("SUPABASE_ANON_KEY", process.env.SUPABASE_ANON_KEY);
+  checkOptional("OPENAI_API_URL", process.env.OPENAI_API_URL);
+  checkOptional("OPENAI_MODEL", process.env.OPENAI_MODEL);
 
   if (errors.length > 0) {
     console.error("\n🚨 CRITICAL CONFIGURATION ERRORS:\n");
@@ -75,7 +79,6 @@ export const ENV = {
   isDev,
   isProduction: !isDev,
   isVercel,
-  isRailway,
   port: detectPort(),
 
   // Database
@@ -86,9 +89,16 @@ export const ENV = {
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
 
-  // Manus Forge
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  // OpenAI
+  openAiApiKey: process.env.OPENAI_API_KEY ?? "",
+  openAiApiUrl: process.env.OPENAI_API_URL ?? "",
+  openAiModel: process.env.OPENAI_MODEL ?? "gpt-4.1-mini",
+
+  // Supabase
+  supabaseUrl: process.env.SUPABASE_URL ?? "",
+  supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? "",
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+  supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? "",
 
   // App
   appId: process.env.VITE_APP_ID ?? "vehicle-advisor-pro",
@@ -98,15 +108,14 @@ export const ENV = {
     if (process.env.CORS_ORIGIN) return process.env.CORS_ORIGIN;
     if (isVercel && process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
     if (isDev) return "*";
-    return ""; // Same-origin for Railway
+    return "";
   })(),
 
   // Frontend URLs
   frontendUrl: (() => {
     if (isVercel && process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-    if (isRailway && process.env.RAILWAY_PUBLIC_DOMAIN) return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
     if (isDev) return "http://localhost:3000";
-    return ""; // Same-origin for unified deploy
+    return ""; // same-origin or unknown in production
   })(),
 
   // API URL (for frontend client)

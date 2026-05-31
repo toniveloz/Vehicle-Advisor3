@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/node-postgres";
 import {
   carfaxAnalyses,
   carfaxSummaries,
@@ -23,6 +23,7 @@ import {
   type InsertUser,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { storageRemove } from "./storage";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -49,47 +50,32 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     return;
   }
 
-  try {
-    const values: InsertUser = { openId: user.openId };
-    const updateSet: Record<string, unknown> = {};
+  const existing = await getUserByOpenId(user.openId);
+  const values: InsertUser = {
+    openId: user.openId,
+    name: user.name ?? null,
+    email: user.email ?? null,
+    loginMethod: user.loginMethod ?? null,
+    lastSignedIn: user.lastSignedIn ?? new Date(),
+    role: user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : null),
+  };
 
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
+  if (!existing) {
+    await db.insert(users).values(values);
+    return;
+  }
 
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = "admin";
-      updateSet.role = "admin";
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
+  const updateData: Partial<InsertUser> = {};
+  if (user.name !== undefined) updateData.name = user.name;
+  if (user.email !== undefined) updateData.email = user.email;
+  if (user.loginMethod !== undefined) updateData.loginMethod = user.loginMethod;
+  if (user.lastSignedIn !== undefined) updateData.lastSignedIn = user.lastSignedIn;
+  if (user.role !== undefined) updateData.role = user.role;
+  if (existing.openId === ENV.ownerOpenId && updateData.role === undefined) {
+    updateData.role = "admin";
+  }
+  if (Object.keys(updateData).length > 0) {
+    await db.update(users).set(updateData).where(eq(users.openId, user.openId));
   }
 }
 
@@ -209,6 +195,42 @@ export async function getVehiclePhotos(vehicleId: number): Promise<VehiclePhoto[
     .from(vehiclePhotos)
     .where(eq(vehiclePhotos.vehicleId, vehicleId))
     .orderBy(vehiclePhotos.displayOrder);
+}
+
+export async function getVehiclePhotoKeys(vehicleId: number): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const rows = await db
+    .select({ photoKey: vehiclePhotos.photoKey })
+    .from(vehiclePhotos)
+    .where(eq(vehiclePhotos.vehicleId, vehicleId));
+
+  return rows.map((row) => row.photoKey).filter((key): key is string => typeof key === "string" && key.trim().length > 0);
+}
+
+export async function getVehicleDamageKeys(vehicleId: number): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const rows = await db
+    .select({ photoKey: vehicleDamages.photoKey })
+    .from(vehicleDamages)
+    .where(eq(vehicleDamages.vehicleId, vehicleId));
+
+  return rows.map((row) => row.photoKey).filter((key): key is string => typeof key === "string" && key.trim().length > 0);
+}
+
+export async function getVehicleCarfaxKey(vehicleId: number): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const row = await db.select({ carfaxPdfKey: vehicles.carfaxPdfKey })
+    .from(vehicles)
+    .where(eq(vehicles.id, vehicleId))
+    .limit(1);
+
+  return row.length > 0 && typeof row[0].carfaxPdfKey === "string" && row[0].carfaxPdfKey.trim().length > 0 ? row[0].carfaxPdfKey : null;
 }
 
 export async function saveVehicleDamage(data: InsertVehicleDamage): Promise<VehicleDamage> {
@@ -331,6 +353,20 @@ export async function getAllVehicles(): Promise<typeof vehicles.$inferSelect[]> 
 export async function deleteVehicle(vehicleId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
+  const photoKeys = await getVehiclePhotoKeys(vehicleId);
+  const damageKeys = await getVehicleDamageKeys(vehicleId);
+  const carfaxKey = await getVehicleCarfaxKey(vehicleId);
+  const keysToDelete = [...photoKeys, ...damageKeys];
+  if (carfaxKey) keysToDelete.push(carfaxKey);
+
+  for (const key of keysToDelete) {
+    try {
+      await storageRemove(key);
+    } catch (error) {
+      console.warn("Failed to remove storage object during vehicle delete:", key, error);
+    }
+  }
   
   // Delete related records first
   await db.delete(vehiclePhotos).where(eq(vehiclePhotos.vehicleId, vehicleId));

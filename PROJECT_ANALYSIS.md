@@ -438,12 +438,16 @@ Can upload Carfax PDFs and trigger analysis
 |----------|------|-------|----------|
 | `VITE_APP_ID` | string | App identifier | Yes |
 | `JWT_SECRET` | string | Cookie/token signing secret | Yes |
-| `DATABASE_URL` | string | MySQL connection string | Yes |
+| `DATABASE_URL` | string | PostgreSQL connection string | Yes |
+| `OPENAI_API_KEY` | string | OpenAI API key | Yes |
+| `OPENAI_API_URL` | string | OpenAI base URL | Optional |
+| `OPENAI_MODEL` | string | OpenAI model name | Optional |
 | `OAUTH_SERVER_URL` | string | OAuth provider URL | Yes |
 | `OWNER_OPEN_ID` | string | Admin user OpenID for notifications | Optional |
 | `NODE_ENV` | enum | production / development | Yes |
-| `BUILT_IN_FORGE_API_URL` | string | Manus Forge API base URL | Yes |
-| `BUILT_IN_FORGE_API_KEY` | string | Forge API authentication key | Yes |
+| `SUPABASE_URL` | string | Supabase project URL | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | string | Supabase service role secret | Yes |
+| `SUPABASE_STORAGE_BUCKET` | string | Supabase storage bucket name | Yes |
 | `CORS_ORIGIN` | string | Allowed CORS origin | Optional |
 | `PORT` | number | Server port (default: 3000) | Optional |
 
@@ -451,8 +455,8 @@ Can upload Carfax PDFs and trigger analysis
 - [server/_core/env.ts](server/_core/env.ts) - Central ENV object
 - [server/db.ts](server/db.ts) - `DATABASE_URL`
 - [server/_core/index.ts](server/_core/index.ts) - `CORS_ORIGIN`, `NODE_ENV`, `PORT`
-- [server/storage.ts](server/storage.ts) - `BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY`
-- [server/_core/llm.ts](server/_core/llm.ts) - `BUILT_IN_FORGE_API_KEY`
+- [server/storage.ts](server/storage.ts) - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`
+- [server/_core/llm.ts](server/_core/llm.ts) - `OPENAI_API_KEY`, `OPENAI_API_URL`, `OPENAI_MODEL`
 - [drizzle.config.ts](drizzle.config.ts) - `DATABASE_URL`
 - [vite.config.ts](vite.config.ts) - `NODE_ENV`
 

@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import pdfParse from "pdf-parse";
 import { invokeLLM } from "./_core/llm";
 import { storageGetSignedUrl } from "./storage";
 import type { InsertCarfaxAnalysis, Vehicle } from "../drizzle/schema";
@@ -79,6 +80,16 @@ function requiredString(value: unknown, field: string, minLength: number = 8): s
     throw new CarfaxAnalysisError(`La extracción del Carfax devolvió un campo incompleto o inválido: ${field}.`);
   }
   return value.trim();
+}
+
+async function extractPdfText(url: string): Promise<string> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new CarfaxAnalysisError(`No se pudo descargar el PDF Carfax para análisis: ${response.statusText}`);
+  }
+  const buffer = await response.arrayBuffer();
+  const { text } = await pdfParse(Buffer.from(buffer));
+  return text;
 }
 
 function optionalString(value: unknown, minLength: number = 1): string {
@@ -253,29 +264,19 @@ export function parseRiskFactors(riskFactorsJson: string | null | undefined): st
 }
 
 export async function extractFactsFromPdf(signedPdfUrl: string): Promise<{ facts: CarfaxExtractedFacts; rawJson: string }> {
+  const pdfText = await extractPdfText(signedPdfUrl);
+  const textSnippet = pdfText.length > 30000 ? `${pdfText.slice(0, 30000)}\n\n[Texto truncado para mantener la petición en tamaño razonable]` : pdfText;
+
   const response = await invokeLLM({
     messages: [
       {
         role: "system",
         content:
-          "Eres un extractor factual de reportes Carfax. Debes leer únicamente el PDF adjunto y devolver JSON válido. No uses conocimiento externo ni datos proporcionados fuera del PDF. Si el PDF no contiene una cifra exacta, dilo explícitamente en el campo correspondiente.",
+          "Eres un extractor factual de reportes Carfax. Debes leer únicamente el texto extraído del PDF adjunto y devolver JSON válido. No uses conocimiento externo ni datos proporcionados fuera del documento. Si el PDF no contiene una cifra exacta, dilo explícitamente en el campo correspondiente.",
       },
       {
         role: "user",
-        content: [
-          {
-            type: "text",
-            text:
-              "Extrae del PDF Carfax adjunto los hechos relevantes para evaluar rentabilidad y viabilidad de compra: identificación del vehículo, accidentes, propietarios, mantenimiento, odómetro, título, evidencia de valor de mercado si aparece, evidencia de valor residual si aparece y señales factuales de riesgo. No inventes datos y no agregues recomendaciones.",
-          },
-          {
-            type: "file_url",
-            file_url: {
-              url: signedPdfUrl,
-              mime_type: "application/pdf",
-            },
-          },
-        ],
+        content: `Extrae del texto extraído del PDF Carfax los hechos relevantes para evaluar rentabilidad y viabilidad de compra: identificación del vehículo, accidentes, propietarios, mantenimiento, odómetro, título, evidencia de valor de mercado si aparece, evidencia de valor residual si aparece y señales factuales de riesgo. No inventes datos y no agregues recomendaciones. Texto del PDF:\n\n${textSnippet}`,
       },
     ],
     response_format: factsResponseFormat,

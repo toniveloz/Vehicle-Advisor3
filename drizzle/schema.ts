@@ -1,17 +1,17 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
+import { int, pgEnum, pgTable, text, timestamp, varchar, numeric } from "drizzle-orm/pg-core";
 
 /**
  * Core user table backing auth flow.
  * Extend this file with additional tables as your product grows.
  * Columns use camelCase to match both database fields and generated types.
  */
-export const users = mysqlTable("users", {
+export const users = pgTable("users", {
   id: int("id").autoincrement().primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: pgEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -24,7 +24,7 @@ export type InsertUser = typeof users.$inferInsert;
  * Vehículos: tabla principal para el asesor
  * El análisis Carfax ocurre en background, no bloquea la creación
  */
-export const vehicles = mysqlTable("vehicles", {
+export const vehicles = pgTable("vehicles", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   vin: varchar("vin", { length: 50 }).notNull().unique(),
@@ -33,16 +33,16 @@ export const vehicles = mysqlTable("vehicles", {
   model: varchar("model", { length: 128 }).notNull(),
   trim: varchar("trim", { length: 128 }),
   mileage: varchar("mileage", { length: 50 }),
-  askingPrice: decimal("askingPrice", { precision: 12, scale: 2 }),
-  marketPrice: decimal("marketPrice", { precision: 12, scale: 2 }), // Para lógica de salvage
+  askingPrice: numeric("askingPrice", { precision: 12, scale: 2 }),
+  marketPrice: numeric("marketPrice", { precision: 12, scale: 2 }), // Para lógica de salvage
   notes: text("notes"),
-  titleType: mysqlEnum("titleType", ["clean", "salvage", "rebuilt", "branded"]).default("clean"),
+  titleType: pgEnum("titleType", ["clean", "salvage", "rebuilt", "branded"]).default("clean"),
   viabilityScore: int("viabilityScore"),
-  riskLevel: mysqlEnum("riskLevel", ["low", "medium", "high"]).default("low"),
+  riskLevel: pgEnum("riskLevel", ["low", "medium", "high"]).default("low"),
   resaleScore: int("resaleScore"),
   carfaxPdfUrl: text("carfaxPdfUrl"),
   carfaxPdfKey: text("carfaxPdfKey"),
-  analysisStatus: mysqlEnum("analysisStatus", ["not_started", "analyzing", "completed", "failed"])
+  analysisStatus: pgEnum("analysisStatus", ["not_started", "analyzing", "completed", "failed"])
     .default("not_started")
     .notNull(),
   analysisError: text("analysisError"),
@@ -54,7 +54,7 @@ export const vehicles = mysqlTable("vehicles", {
   deliveryCity: varchar("deliveryCity", { length: 128 }),
   deliveryState: varchar("deliveryState", { length: 2 }),
   distanceMiles: int("distanceMiles"),
-  logisticsPriorityColor: mysqlEnum("logisticsPriorityColor", ["green", "yellow", "orange", "red"]),
+  logisticsPriorityColor: pgEnum("logisticsPriorityColor", ["green", "yellow", "orange", "red"]),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -65,7 +65,7 @@ export type InsertVehicle = typeof vehicles.$inferInsert;
 /**
  * Fotos de vehículos: hasta 5 por vehículo, opcionales
  */
-export const vehiclePhotos = mysqlTable("vehiclePhotos", {
+export const vehiclePhotos = pgTable("vehiclePhotos", {
   id: int("id").autoincrement().primaryKey(),
   vehicleId: int("vehicleId").notNull(),
   photoUrl: text("photoUrl").notNull(),
@@ -81,7 +81,7 @@ export type InsertVehiclePhoto = typeof vehiclePhotos.$inferInsert;
  * Análisis Carfax: se guarda en background, no bloquea UI
  * Contiene datos extraídos del PDF y análisis de viabilidad
  */
-export const carfaxAnalyses = mysqlTable("carfaxAnalyses", {
+export const carfaxAnalyses = pgTable("carfaxAnalyses", {
   id: int("id").autoincrement().primaryKey(),
   vehicleId: int("vehicleId").notNull(),
   viabilityScore: int("viabilityScore"),
@@ -108,7 +108,7 @@ export type InsertCarfaxAnalysis = typeof carfaxAnalyses.$inferInsert;
 /**
  * Daños detectados: galería de daños específicos por tipo
  */
-export const vehicleDamages = mysqlTable("vehicleDamages", {
+export const vehicleDamages = pgTable("vehicleDamages", {
   id: int("id").autoincrement().primaryKey(),
   vehicleId: int("vehicleId").notNull(),
   type: varchar("type", { length: 128 }).notNull(), // bumper, door, fender, suspension, airbags, etc.
@@ -125,12 +125,12 @@ export type InsertVehicleDamage = typeof vehicleDamages.$inferInsert;
 /**
  * Piezas a reemplazar: lista de piezas recomendadas con links y costos
  */
-export const vehicleParts = mysqlTable("vehicleParts", {
+export const vehicleParts = pgTable("vehicleParts", {
   id: int("id").autoincrement().primaryKey(),
   vehicleId: int("vehicleId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   link: text("link"),
-  estimatedCost: decimal("estimatedCost", { precision: 10, scale: 2 }),
+  estimatedCost: numeric("estimatedCost", { precision: 10, scale: 2 }),
   displayOrder: int("displayOrder").default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -141,7 +141,7 @@ export type InsertVehiclePart = typeof vehicleParts.$inferInsert;
 /**
  * Resumen Carfax: información visual del reporte Carfax
  */
-export const carfaxSummaries = mysqlTable("carfaxSummaries", {
+export const carfaxSummaries = pgTable("carfaxSummaries", {
   id: int("id").autoincrement().primaryKey(),
   vehicleId: int("vehicleId").notNull(),
   cleanTitle: int("cleanTitle").default(0), // 0 = false, 1 = true

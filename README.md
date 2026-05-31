@@ -3,22 +3,22 @@
 Proyecto fullstack profesional con:
 - Frontend: React + Vite (compilado)
 - Backend: Express + tRPC
-- Base de datos: MySQL + Drizzle ORM
+- Base de datos: PostgreSQL + Drizzle ORM
 - Autenticación: JWT + OAuth
-- Almacenamiento: Manus Forge S3
-- LLM Analysis: Google Gemini 2.5-flash
-- Deploy: Railway (Express sirve frontend + backend unificado)
+- Almacenamiento: Supabase Storage
+- LLM Analysis: OpenAI / Chat Completions
+- Deploy: Vercel (Frontend estático + Backend como Serverless Functions)
 
 ## Arquitectura
 
-**Deploy Unified**: Todo (frontend compilado + API) se despliega desde un único servidor Express en Railway.
+**Deploy en Vercel**: El frontend se sirve como archivos estáticos y el backend se despliega como funciones serverless en `api/`.
 
 ```
-Railway (Express Server)
-├── /api/trpc/* -> tRPC API endpoints
-├── /api/oauth/* -> OAuth callbacks  
-├── /storage/* -> Storage proxy (Manus Forge)
-└── /* -> Compiled React frontend (SPA)
+Vercel (Frontend static + Serverless Functions)
+├── /api/trpc/* -> tRPC endpoints (Serverless)
+├── /api/oauth/* -> OAuth callbacks (Serverless)
+├── /api/storageProxy/* -> Storage proxy (Serverless)
+└── /* -> Frontend estático (dist)
 ```
 
 ## Comandos principales
@@ -37,10 +37,12 @@ npm run check           # valida tipos TypeScript
 Copia `.env.example` a `.env` y completa los valores. Ver archivo para detalles.
 
 Mínimo requerido en producción:
-- `DATABASE_URL` - MySQL connection string
+- `DATABASE_URL` - PostgreSQL connection string
 - `JWT_SECRET` - JWT signing key
-- `BUILT_IN_FORGE_API_URL` - Forge API URL
-- `BUILT_IN_FORGE_API_KEY` - Forge API Key
+- `OPENAI_API_KEY` - OpenAI API key
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
+- `SUPABASE_STORAGE_BUCKET` - Supabase storage bucket name
 - `OAUTH_SERVER_URL` - OAuth provider URL
 
 ## Desarrollo local (Windows)
@@ -97,36 +99,22 @@ Mínimo requerido en producción:
 - Zod validation
 - Type safety
 
-## Despliegue en Railway
+## Despliegue en Vercel
 
-### Setup Inicial
+1. Conecta el repositorio al Proyecto Vercel (https://vercel.com).
+2. En Project Settings → Environment Variables, añade como Secrets las variables requeridas (`DATABASE_URL`, `JWT_SECRET`, `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, `OAUTH_SERVER_URL`, `VITE_APP_ID`, `VITE_OAUTH_PORTAL_URL`).
+3. Configura el comando de build: `npm run vercel-build` (o `npm run build` según preferencia). El output de frontend se espera en `dist`.
+4. Ejecuta migraciones antes del primer deploy (CI step o manual):
 
-1. Crea una cuenta en [Railway.app](https://railway.app)
-2. Conecta tu repositorio GitHub
-3. Crea dos servicios:
-
-   **Service 1: MySQL Database**
-   - Marketplace → MySQL
-   - Variables generadas automáticamente
-
-   **Service 2: Express App**
-   - Import from GitHub → vehicle-advisor-pro
-   - Environment Variables (ver `.env.example`)
-
-### Deploy Commands
-
-```
-Build: npm run build
-Start: npm run start
+```bash
+npx drizzle-kit migrate:up
 ```
 
-### Verifica el deploy
+5. Despliega; prueba rutas principales:
 
-Railway proporciona una URL pública: `https://your-app.railway.app`
-
-Prueba:
-- `/admin` → Admin panel
-- `/` → Home page
+- `/` → Frontend
+- `/api/trpc` → tRPC endpoint
+- `/api/oauth` → OAuth callbacks
 
 ## Build & Verification
 

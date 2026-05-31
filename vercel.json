@@ -4,9 +4,11 @@
   "env": {
     "DATABASE_URL": "@database_url",
     "JWT_SECRET": "@jwt_secret",
+    "OPENAI_API_KEY": "@openai_api_key",
+    "SUPABASE_URL": "@supabase_url",
+    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
+    "SUPABASE_STORAGE_BUCKET": "@supabase_storage_bucket",
     "OAUTH_SERVER_URL": "@oauth_server_url",
-    "BUILT_IN_FORGE_API_URL": "@forge_api_url",
-    "BUILT_IN_FORGE_API_KEY": "@forge_api_key",
     "VITE_APP_ID": "@vite_app_id",
     "VITE_OAUTH_PORTAL_URL": "@oauth_portal_url"
   }

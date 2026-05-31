@@ -35,6 +35,22 @@ import {
   searchZipCodes,
 } from "./logisticsService";
 
+function extractStorageKeyFromUrl(value: string): string | null {
+  const normalized = value.trim();
+  if (normalized.startsWith("/manus-storage/")) {
+    return normalized.replace(/^\/manus-storage\//, "");
+  }
+  try {
+    const url = new URL(normalized, "http://localhost");
+    if (url.pathname.startsWith("/manus-storage/")) {
+      return url.pathname.replace(/^\/manus-storage\//, "");
+    }
+  } catch {
+    // not a valid absolute URL
+  }
+  return null;
+}
+
 const MAX_PDF_SIZE = 50 * 1024 * 1024;
 
 const vehicleInput = z.object({
@@ -545,48 +561,49 @@ export const appRouter = router({
         if (db) {
           await db.delete(vehiclePhotos).where(eq(vehiclePhotos.vehicleId, input.id));
         }
-        
+
         for (let i = 0; i < photosBase64.length; i++) {
           const photoBase64 = photosBase64[i];
-          if (photoBase64.startsWith('data:')) {
-            const base64Data = photoBase64.split(',')[1];
-            const buffer = Buffer.from(base64Data, 'base64');
-            const { url, key } = await storagePut(`vehicle-${input.id}-photo-${i}`, buffer, 'image/jpeg');
+          if (photoBase64.startsWith("data:")) {
+            const base64Data = photoBase64.split(",")[1];
+            const buffer = Buffer.from(base64Data, "base64");
+            const { url, key } = await storagePut(`vehicle-${input.id}-photo-${i}.jpg`, buffer, "image/jpeg");
             await saveVehiclePhoto(input.id, url, key, i);
-          } else if (photoBase64.startsWith('http')) {
-            await saveVehiclePhoto(input.id, photoBase64, `vehicle-${input.id}-photo-${i}`, i);
+          } else if (photoBase64.startsWith("http") || photoBase64.startsWith("/")) {
+            const key = extractStorageKeyFromUrl(photoBase64) ?? `vehicle-${input.id}-photo-${i}`;
+            await saveVehiclePhoto(input.id, photoBase64, key, i);
           }
         }
       }
-      
+
       // Procesar daños
       if (damages && damages.length > 0) {
         const db = await getDb();
         if (db) {
           await db.delete(vehicleDamages).where(eq(vehicleDamages.vehicleId, input.id));
         }
-        
+
         for (let i = 0; i < damages.length; i++) {
           const damage = damages[i];
           let photoUrl = null;
           let photoKey = null;
-          
+
           if (damage.photoBase64) {
-            if (damage.photoBase64.startsWith('data:')) {
-              const base64Data = damage.photoBase64.split(',')[1];
-              const buffer = Buffer.from(base64Data, 'base64');
-              const result = await storagePut(`vehicle-${input.id}-damage-${i}`, buffer, 'image/jpeg');
+            if (damage.photoBase64.startsWith("data:")) {
+              const base64Data = damage.photoBase64.split(",")[1];
+              const buffer = Buffer.from(base64Data, "base64");
+              const result = await storagePut(`vehicle-${input.id}-damage-${i}.jpg`, buffer, "image/jpeg");
               photoUrl = result.url;
               photoKey = result.key;
-            } else if (damage.photoBase64.startsWith('http')) {
+            } else if (damage.photoBase64.startsWith("http") || damage.photoBase64.startsWith("/")) {
               photoUrl = damage.photoBase64;
-              photoKey = `vehicle-${input.id}-damage-${i}`;
+              photoKey = extractStorageKeyFromUrl(damage.photoBase64) ?? `vehicle-${input.id}-damage-${i}`;
             }
           }
-          
+
           await saveVehicleDamage({
             vehicleId: input.id,
-            type: damage.type || 'Unknown',
+            type: damage.type || "Unknown",
             photoUrl,
             photoKey,
             description: damage.description,
